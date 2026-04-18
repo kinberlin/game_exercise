@@ -1,5 +1,5 @@
+use game_exercise::game_exercise::Game;
 use std::io;
-use game_exercise::Game;
 
 fn main() {
     println!("Enter n (board size): ");
@@ -32,7 +32,14 @@ fn main() {
     io::stdin().read_line(&mut input).unwrap();
     let max_moves: u32 = input.trim().parse().unwrap();
 
-    let mut game = Game::new(n, m, food_amount, poison_amount, initial_strength, max_moves);
+    let mut game = Game::new(
+        n,
+        m,
+        food_amount,
+        poison_amount,
+        initial_strength,
+        max_moves,
+    );
 
     println!("Initial game state:");
     println!("{}", game);

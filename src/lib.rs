@@ -1,180 +1,72 @@
-use std::fmt;
-use rand::prelude::*;
+//! # Game Exercise Library
+//! 
+//! A collection of programming exercises for learning Rust.
+//! Each exercise is organized as a module for easy testing and reuse.
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+pub mod game_exercise;
+
+use std::collections::HashMap;
+// ─── DistributoreAutomatico ───────────────────────────────────────────────────
+
+pub struct DistributoreAutomatico {
+    pub prodotti: HashMap<String, i32>,
+    pub prodotto_in_erogazione: Option<String>,
+    // Option permette di estrarre (take) lo stato prima della chiamata,
+    // poi riassegnare il valore di ritorno — risolve il borrow checker senza placeholder.
+    stato: Option<Box<dyn StatoDistributore>>,
 }
 
-impl Direction {
-    pub fn opposite(&self) -> Direction {
-        match self {
-            Direction::Up => Direction::Down,
-            Direction::Down => Direction::Up,
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
+impl DistributoreAutomatico {
+    pub fn new(prodotti: HashMap<String, i32>) -> Self {
+        DistributoreAutomatico {
+            prodotti,
+            prodotto_in_erogazione: None,
+            stato: Some(Box::new(InAttesaCarta)),
         }
     }
 
-    pub fn random() -> Direction {
-        let mut rng = thread_rng();
-        match rng.gen_range(0..4) {
-            0 => Direction::Up,
-            1 => Direction::Down,
-            2 => Direction::Left,
-            _ => Direction::Right,
-        }
+    /// Solo per i test: bypassa il lancio moneta e forza CartaAccettata.
+    pub fn forza_carta_accettata(&mut self) {
+        self.stato = Some(Box::new(CartaAccettata));
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Cell {
-    Wall,
-    Empty,
-    Food(u32),
-    Poison(u32),
-}
+    fn dispatch<F>(&mut self, f: F)
+    where
+        F: FnOnce(Box<dyn StatoDistributore>, &mut DistributoreAutomatico) -> Box<dyn StatoDistributore>,
+    {
+        let stato = self.stato.take().expect("stato mancante");
+        let nuovo = f(stato, self);
+        self.stato = Some(nuovo);
+    }
 
-#[derive(Clone, Debug)]
-pub struct Player {
-    pub x: usize,
-    pub y: usize,
-    pub direction: Direction,
-    pub strength: u32,
-}
+    pub fn inserisci_carta(&mut self) {
+        self.dispatch(|s, d| s.inserisci_carta(d));
+    }
 
-#[derive(Clone, Debug)]
-pub struct Game {
-    pub board: Vec<Vec<Cell>>,
-    pub player: Player,
-    pub max_moves: u32,
-    pub current_moves: u32,
-}
+    pub fn seleziona_prodotto(&mut self, prodotto: &str) {
+        self.dispatch(|s, d| s.seleziona_prodotto(d, prodotto));
+    }
 
-impl fmt::Display for Game {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (i, row) in self.board.iter().enumerate() {
-            for (j, cell) in row.iter().enumerate() {
-                if i == self.player.y && j == self.player.x {
-                    write!(f, "P")?;
-                } else {
-                    match cell {
-                        Cell::Wall => write!(f, "🧱")?,
-                        Cell::Empty => write!(f, "🟩")?,
-                        Cell::Food(_) => write!(f, "🍎")?,
-                        Cell::Poison(_) => write!(f, "☠️")?,
-                    }
-                }
-            }
-            writeln!(f)?;
-        }
-        write!(f, "Player strength: {}, Moves: {}/{}", self.player.strength, self.current_moves, self.max_moves)
+    pub fn conferma_selezionato(&mut self) {
+        self.dispatch(|s, d| s.conferma_selezionato(d));
+    }
+
+    pub fn cancella(&mut self) {
+        self.dispatch(|s, d| s.cancella(d));
+    }
+
+    pub fn preleva_prodotto(&mut self) {
+        self.dispatch(|s, d| s.preleva_prodotto(d));
     }
 }
 
-impl Game {
-    pub fn new(n: usize, m: usize, food_amount: u32, poison_amount: u32, initial_strength: u32, max_moves: u32) -> Game {
-        let mut board = vec![vec![Cell::Empty; n]; n];
-        // Set walls on borders
-        for i in 0..n {
-            board[0][i] = Cell::Wall;
-            board[n-1][i] = Cell::Wall;
-            board[i][0] = Cell::Wall;
-            board[i][n-1] = Cell::Wall;
-        }
-        // Place food and poison randomly
-        let mut rng = thread_rng();
-        let mut positions: Vec<(usize, usize)> = (1..n-1).flat_map(|i| (1..n-1).map(move |j| (i, j))).collect();
-        positions.shuffle(&mut rng);
-        for i in 0..m {
-            board[positions[i].0][positions[i].1] = Cell::Food(food_amount);
-        }
-        for i in m..2*m {
-            board[positions[i].0][positions[i].1] = Cell::Poison(poison_amount);
-        }
-        // Place player in a random empty cell
-        let player_pos = positions[2*m];
-        let player = Player {
-            x: player_pos.1,
-            y: player_pos.0,
-            direction: Direction::random(),
-            strength: initial_strength,
-        };
-        Game {
-            board,
-            player,
-            max_moves,
-            current_moves: 0,
-        }
-    }
+// ─── Lancio moneta ───────────────────────────────────────────────────────────
 
-    pub fn step(&mut self) -> bool {
-        // Coin flip: true for continue, false for change direction
-        let mut rng = thread_rng();
-        let coin = rng.gen_bool(0.5);
-        if !coin {
-            self.player.direction = Direction::random();
-        }
-        // Move
-        let (dx, dy) = match self.player.direction {
-            Direction::Up => (0, -1),
-            Direction::Down => (0, 1),
-            Direction::Left => (-1, 0),
-            Direction::Right => (1, 0),
-        };
-        let new_x = self.player.x as isize + dx;
-        let new_y = self.player.y as isize + dy;
-        if new_x < 0 || new_x >= self.board.len() as isize || new_y < 0 || new_y >= self.board.len() as isize {
-            // Wall, bounce
-            self.player.direction = self.player.direction.opposite();
-            return true;
-        }
-        let new_x = new_x as usize;
-        let new_y = new_y as usize;
-        match self.board[new_y][new_x] {
-            Cell::Wall => {
-                self.player.direction = self.player.direction.opposite();
-            }
-            Cell::Empty => {
-                self.player.x = new_x;
-                self.player.y = new_y;
-            }
-            Cell::Food(amount) => {
-                self.player.strength += amount;
-                self.board[new_y][new_x] = Cell::Empty;
-                self.player.x = new_x;
-                self.player.y = new_y;
-            }
-            Cell::Poison(amount) => {
-                if self.player.strength <= amount {
-                    self.player.strength = 0;
-                } else {
-                    self.player.strength -= amount;
-                }
-                self.board[new_y][new_x] = Cell::Empty;
-                self.player.x = new_x;
-                self.player.y = new_y;
-            }
-        }
-        self.current_moves += 1;
-        // Check end conditions
-        if self.player.strength == 0 {
-            return false; // Lose
-        }
-        if self.current_moves >= self.max_moves {
-            return false; // Win
-        }
-        true
-    }
-
-    pub fn is_won(&self) -> bool {
-        self.current_moves >= self.max_moves && self.player.strength > 0
-    }
-
-    pub fn is_lost(&self) -> bool {
-        self.player.strength == 0
-    }
+fn lancio_moneta() -> bool {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .subsec_nanos();
+    nanos % 2 == 0
 }
