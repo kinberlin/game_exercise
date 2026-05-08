@@ -8,23 +8,18 @@ pub trait StatoDistributore {
     fn preleva_prodotto(self: Box<Self>, d: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore>;
 }
 
-// ─── Stati concreti ──────────────────────────────────────────────────────────
-
 pub struct InAttesaCarta;
 pub struct CartaAccettata;
 pub struct SelezionatoProdotto;
 pub struct ProdottoDisponibile;
 pub struct ProdottoEsaurito;
 
-// ─── Macro helper per "Operazione non Valida" ────────────────────────────────
 macro_rules! non_valida {
     ($self:ident) => {{
         println!("Operazione non Valida");
         $self
     }};
 }
-
-// ─── InAttesaCarta ───────────────────────────────────────────────────────────
 
 impl StatoDistributore for InAttesaCarta {
     fn inserisci_carta(self: Box<Self>, d: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> {
@@ -41,8 +36,6 @@ impl StatoDistributore for InAttesaCarta {
     fn cancella(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
     fn preleva_prodotto(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
 }
-
-// ─── CartaAccettata ──────────────────────────────────────────────────────────
 
 impl StatoDistributore for CartaAccettata {
     fn inserisci_carta(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
@@ -64,8 +57,6 @@ impl StatoDistributore for CartaAccettata {
     }
     fn preleva_prodotto(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
 }
-
-// ─── SelezionatoProdotto ─────────────────────────────────────────────────────
 
 impl StatoDistributore for SelezionatoProdotto {
     fn inserisci_carta(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
@@ -89,8 +80,6 @@ impl StatoDistributore for SelezionatoProdotto {
     fn preleva_prodotto(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
 }
 
-// ─── ProdottoDisponibile ─────────────────────────────────────────────────────
-
 impl StatoDistributore for ProdottoDisponibile {
     fn inserisci_carta(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
     fn seleziona_prodotto(self: Box<Self>, _: &mut DistributoreAutomatico, _: &str) -> Box<dyn StatoDistributore> { non_valida!(self) }
@@ -106,7 +95,6 @@ impl StatoDistributore for ProdottoDisponibile {
     }
 }
 
-// ─── ProdottoEsaurito ────────────────────────────────────────────────────────
 
 impl StatoDistributore for ProdottoEsaurito {
     fn inserisci_carta(self: Box<Self>, _: &mut DistributoreAutomatico) -> Box<dyn StatoDistributore> { non_valida!(self) }
