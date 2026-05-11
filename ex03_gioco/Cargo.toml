@@ -1,0 +1,11 @@
+[package]
+name = "ex03_gioco"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "gioco"
+path = "src/main.rs"
+
+[dependencies]
+rand = "0.8"

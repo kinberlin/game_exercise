@@ -1,7 +1,3 @@
-[package]
-name = "game_exercise"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-rand = "0.8"
+[workspace]
+members = ["ex03_gioco", "ex04_distributore", "ex06_persona", "ex07_asta"]
+resolver = "2"
