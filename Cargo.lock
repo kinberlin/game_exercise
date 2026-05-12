@@ -9,7 +9,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
-name = "game_exercise"
+name = "ex03_gioco"
+version = "0.1.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
+name = "ex04_distributore"
+version = "0.1.0"
+
+[[package]]
+name = "ex06_persona"
+version = "0.1.0"
+
+[[package]]
+name = "ex07_asta"
 version = "0.1.0"
 dependencies = [
  "rand",
